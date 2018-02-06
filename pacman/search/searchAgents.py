@@ -319,6 +319,7 @@ class CornersProblem(search.SearchProblem):
         """
         Stores the walls, pacman's starting position and corners.
         """
+        self.gameState = startingGameState
         self.walls = startingGameState.getWalls()
         self.startingPosition = startingGameState.getPacmanPosition()
         top, right = self.walls.height - 2, self.walls.width - 2
@@ -419,13 +420,23 @@ def cornersHeuristic(state, problem):
     corners = problem.corners  # These are the corner coordinates
     walls = problem.walls  # These are the walls of the maze, as a Grid (game.py)
     total_h = 0
+    candidates = []
     for corner in corners:
         if corner not in state.traveled:
-            total_h += util.manhattanDistance(state.position, corner)
-
-    "*** YOUR CODE HERE ***"
+            candidates.append(corner)
+    startPoint = state.position
+    while len(candidates) > 0:
+        min_i = 0
+        min_v = util.manhattanDistance(startPoint,candidates[0])
+        for i in range(1,len(candidates)):
+            temp_v = util.manhattanDistance(startPoint,candidates[i])
+            if min_v > temp_v:
+                min_i = i
+                min_v = temp_v
+        total_h += min_v
+        startPoint = candidates[min_i]
+        candidates.remove(startPoint)
     return total_h  # Default to trivial solution
-
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -522,12 +533,13 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
-    heuris = 0
     foodList = foodGrid.asList()
+    candidates = [0]
     for food in foodList:
-        heuris += util.manhattanDistance(position,food)
-    return heuris
-
+        candidates.append(euclideanDistance(position,food))
+    return min(candidates) + len(foodList)
+def euclideanDistance(xy1,xy2):
+    return ((xy1[0] - xy2[0]) ** 2 + (xy1[1] - xy2[1]) ** 2) ** 0.5
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
@@ -607,27 +619,79 @@ class ApproximateSearchAgent(Agent):
     def registerInitialState(self, state):
         "This method is called before any moves are made."
         "*** YOUR CODE HERE ***"
+        self.actions = []
+        currentState = state
+        while (currentState.getFood().count() > 0):
+            nextPathSegment = self.findPathToClosestDot(currentState)  # The missing piece
+            self.actions += nextPathSegment
+            for action in nextPathSegment:
+                legal = currentState.getLegalActions()
+                if action not in legal:
+                    t = (str(action), str(currentState))
+                    raise Exception, 'findPathToClosestDot returned an illegal move: %s!\n%s' % t
+                currentState = currentState.generateSuccessor(0, action)
+        self.actionIndex = 0
+        print 'Path found with cost %d.' % len(self.actions)
+
+    def findPathToClosestDot(self, gameState):
+        "Returns a path (a list of actions) to the closest dot, starting from gameState"
+        # Here are some useful elements of the startState
+        startPosition = gameState.getPacmanPosition()
+        x, y = startPosition
+        food = gameState.getFood()
+        walls = gameState.getWalls()
+        problem = DeepFoodSearchProblem(gameState)
+        "*** YOUR CODE HERE ***"
+        return search.uniformCostSearch(problem)
+
 
     def getAction(self, state):
-        """
-        From game.py:
-        The Agent will receive a GameState and must return an action from
-        Directions.{North, South, East, West, Stop}
-        """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        if 'actionIndex' not in dir(self): self.actionIndex = 0
+        i = self.actionIndex
+        self.actionIndex += 1
+        if i < len(self.actions):
+            return self.actions[i]
+        else:
+            return Directions.STOP
 
+class DeepFoodSearchProblem(PositionSearchProblem):
+
+    def __init__(self, gameState):
+        # Store the food for later reference
+        self.food = gameState.getFood()
+
+        # Store info for the PositionSearchProblem (no need to change this)
+        self.walls = gameState.getWalls()
+        self.startState = gameState.getPacmanPosition()
+        self.costFn = lambda x: 1
+        self._visited, self._visitedlist, self._expanded = {}, [], 0
+
+    def isGoalState(self, state):
+        x, y = state
+        "*** YOUR CODE HERE ***"
+        return self.food[x][y]
+        # util.raiseNotDefined()
+
+    def getSuccessors(self, state):
+        successors = []
+        for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+            x, y = state
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            if not self.walls[nextx][nexty]:
+                nextState = (nextx, nexty)
+                cost = self.costFn(nextState)
+                successors.append((nextState, action, cost))
+
+        # Bookkeeping for display purposes
+        self._expanded += 1
+        if state not in self._visited:
+            self._visited[state] = True
+            self._visitedlist.append(state)
+
+        return successors
 
 def mazeDistance(point1, point2, gameState):
-    """
-    Returns the maze distance between any two points, using the search functions
-    you have already built.  The gameState can be any game state -- Pacman's position
-    in that state is ignored.
-
-    Example usage: mazeDistance( (2,4), (5,6), gameState)
-
-    This might be a useful helper function for your ApproximateSearchAgent.
-    """
     x1, y1 = point1
     x2, y2 = point2
     walls = gameState.getWalls()
