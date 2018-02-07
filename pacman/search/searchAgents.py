@@ -534,10 +534,27 @@ def foodHeuristic(state, problem):
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
     foodList = foodGrid.asList()
-    candidates = [0]
+    if len(foodList) == 0:
+        return 0
+    total_h = 0
+    startPoint = position
+    min_i = 0
+    min_v = util.manhattanDistance(startPoint,foodList[0])
+    for i in range(1,len(foodList)):
+        temp_v = util.manhattanDistance(startPoint,foodList[i])
+        if min_v > temp_v:
+            min_i = i
+            min_v = temp_v
+    total_h += min_v
+    startPoint = foodList[min_i]
+    foodList.remove(startPoint)
+    max_v = 0
     for food in foodList:
-        candidates.append(euclideanDistance(position,food))
-    return min(candidates) + len(foodList)
+        temp_v = util.manhattanDistance(startPoint,food)
+        if max_v < temp_v:
+            max_v = temp_v
+    total_h += max_v
+    return total_h
 def euclideanDistance(xy1,xy2):
     return ((xy1[0] - xy2[0]) ** 2 + (xy1[1] - xy2[1]) ** 2) ** 0.5
 
