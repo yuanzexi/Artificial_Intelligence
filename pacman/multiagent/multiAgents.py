@@ -332,7 +332,6 @@ def betterEvaluationFunction(currentGameState):
     score = currentGameState.getScore()
     score += sum([1.0 / manhattanDistance(currentPos, position) for position in currentCapsules])
     score += sum([1.0 / manhattanDistance(currentPos, position) for position in currentFood.asList()])
-    score += (currentFood.count() - currentFood.count())
     totaltime = sum([time for time in currentScaredTimes])
     score += totaltime
     for ghostState in currentGhostStates:
@@ -362,4 +361,59 @@ class ContestAgent(MultiAgentSearchAgent):
           just make a beeline straight towards Pacman (or away from him if they're scared!)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+        return self.minimax_decision(gameState)
+
+    def minimax_decision(self, gameState):
+        max_score, action = self.max_value(gameState, self.index, 0)
+        return action
+
+    def max_value(self, gameState, index, depth):
+        scores = []
+        legalMoves = gameState.getLegalActions(index)
+        # if 'Stop' in legalMoves:
+        #     legalMoves.remove('Stop')
+        if gameState.isLose() or gameState.isWin() or self.depth == depth:
+            return contestEvaluationFunction(gameState), None
+        for action in legalMoves:
+            state = gameState.generateSuccessor(index, action)
+            scores.append(self.min_value(state, 1, depth))
+        bestScore = max(scores)
+        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
+        chosenIndex = random.choice(bestIndices)  # Pick randomly among the best
+        return bestScore, legalMoves[chosenIndex]
+
+    def min_value(self, gameState, index, depth):
+        scores = []
+        minMaxFlag = index >= gameState.getNumAgents() - 1
+        legalMoves = gameState.getLegalActions(index)
+        if gameState.isLose() or gameState.isWin():
+            return contestEvaluationFunction(gameState)
+        weight = 1.0 / len(legalMoves)
+        for action in legalMoves:
+            state = gameState.generateSuccessor(index, action)
+            if minMaxFlag:
+                scores.append(self.max_value(state, self.index, depth + 1)[0])
+            else:
+                scores.append(weight * self.min_value(state, index + 1, depth))
+        return sum(scores)
+def contestEvaluationFunction(currentGameState):
+    "*** YOUR CODE HERE ***"
+    util.raiseNotDefined()
+    currentPos = currentGameState.getPacmanPosition()
+    currentFood = currentGameState.getFood()  # food available from current state
+    currentCapsules = currentGameState.getCapsules()  # power pellets/capsules available from current state
+    currentGhostStates = currentGameState.getGhostStates()
+    currentScaredTimes = [ghostState.scaredTimer for ghostState in currentGhostStates]
+    score = currentGameState.getScore()
+    score += sum([1.0 / manhattanDistance(currentPos, position) for position in currentCapsules])
+    score += sum([1.0 / manhattanDistance(currentPos, position) for position in currentFood.asList()])
+    totaltime = sum([time for time in currentScaredTimes])
+    score += totaltime
+    if totaltime > 0 and currentPos == currentGhostStates[0].start.pos:
+        score -= 100
+    for ghostState in currentGhostStates:
+        if manhattanDistance(currentPos, ghostState.getPosition()) <= 2:
+            if not totaltime > 0:
+                score -= 100
+    return score
