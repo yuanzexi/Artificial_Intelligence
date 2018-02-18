@@ -36,8 +36,8 @@
       <file leaf-file-name="multiAgents.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/multiAgents.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="431">
-              <caret line="175" column="0" lean-forward="true" selection-start-line="175" selection-start-column="0" selection-end-line="175" selection-end-column="0" />
+            <state relative-caret-position="399">
+              <caret line="253" column="45" lean-forward="true" selection-start-line="253" selection-start-column="45" selection-end-line="253" selection-end-column="45" />
               <folding />
             </state>
           </provider>
@@ -176,7 +176,7 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="multiagent" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/autograder.py" />
-      <option name="PARAMETERS" value="-q q2 --no-graphics" />
+      <option name="PARAMETERS" value="-q q3 --no-graphics" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -194,7 +194,7 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="multiagent" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pacman.py" />
-      <option name="PARAMETERS" value="-p ReflexAgent -l testClassic" />
+      <option name="PARAMETERS" value="-p AlphaBetaAgent -a depth=3 -l minimaxClassic" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -333,8 +333,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/multiAgents.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="431">
-          <caret line="175" column="0" lean-forward="true" selection-start-line="175" selection-start-column="0" selection-end-line="175" selection-end-column="0" />
+        <state relative-caret-position="399">
+          <caret line="253" column="45" lean-forward="true" selection-start-line="253" selection-start-column="45" selection-end-line="253" selection-end-column="45" />
           <folding />
         </state>
       </provider>

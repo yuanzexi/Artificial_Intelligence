@@ -164,7 +164,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
         legalMoves = gameState.getLegalActions(index)
         # if 'Stop' in legalMoves:
         #     legalMoves.remove('Stop')
-        if gameState.isLose() or gameState.isWin() or self.depth == depth :
+        if gameState.isLose() or gameState.isWin() or self.depth == depth:
             return self.evaluationFunction(gameState), None
         for action in legalMoves:
             state = gameState.generateSuccessor(index, action)
@@ -178,7 +178,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
         scores = []
         minMaxFlag = index >= gameState.getNumAgents() - 1
         legalMoves = gameState.getLegalActions(index)
-        if gameState.isLose() or gameState.isWin() :
+        if gameState.isLose() or gameState.isWin():
             return self.evaluationFunction(gameState), None
         for action in legalMoves:
             state = gameState.generateSuccessor(index, action)
@@ -202,7 +202,53 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
           Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return self.minimax_decision(gameState)
+        # util.raiseNotDefined()
+
+    def minimax_decision(self, gameState):
+        max_score, action = self.max_value(gameState, self.index, 0, float('-inf'), float('inf'))
+        # print max_score
+        return action
+
+    def max_value(self, gameState, index, depth, alpha, beta):
+        v = float('-inf')
+        move = None
+        legalMoves = gameState.getLegalActions(index)
+        # if 'Stop' in legalMoves:
+        #     legalMoves.remove('Stop')
+        if gameState.isLose() or gameState.isWin() or self.depth == depth:
+            return self.evaluationFunction(gameState), None
+        for action in legalMoves:
+            state = gameState.generateSuccessor(index, action)
+            value = self.min_value(state, 1, depth, alpha, beta)[0]
+            if v < value:
+                v = value
+                move = action
+            if v > beta:
+                return v, move
+            alpha = max(alpha, v)
+        return v, move
+
+    def min_value(self, gameState, index, depth, alpha, beta):
+        v = float('inf')
+        move = None
+        minMaxFlag = index >= gameState.getNumAgents() - 1
+        legalMoves = gameState.getLegalActions(index)
+        if gameState.isLose() or gameState.isWin():
+            return self.evaluationFunction(gameState), None
+        for action in legalMoves:
+            state = gameState.generateSuccessor(index, action)
+            if minMaxFlag:
+                value = self.max_value(state, self.index, depth + 1, alpha, beta)[0]
+            else:
+                value = self.min_value(state, index + 1, depth, alpha, beta)[0]
+            if v > value:
+                v = value
+                move = action
+            if v < alpha:
+                return v, move
+            beta = min(beta, v)
+        return v, move
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
