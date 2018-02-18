@@ -292,7 +292,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legalMoves = gameState.getLegalActions(index)
         if gameState.isLose() or gameState.isWin():
             return self.evaluationFunction(gameState)
-        weight = 1.0/len(legalMoves)
+        weight = 1.0 / len(legalMoves)
         for action in legalMoves:
             state = gameState.generateSuccessor(index, action)
             if minMaxFlag:
@@ -309,9 +309,39 @@ def betterEvaluationFunction(currentGameState):
       evaluation function (question 5).
 
       DESCRIPTION: <write something here so we know what you did>
+
+      Analysis:
+      A. Important features:
+        1. distance between pacman's position and remain foods' positions
+        2. distance between pacman's position and remain capsules' positions
+        3. number of remain foods
+        4. distance between pacman's position and ghosts' positions
+        5. vailable scared times
+        6. currentGameState.getScore()
+
+      B. Strategy:
+        Use linear combination of important features as evaluation function
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # util.raiseNotDefined()
+    currentPos = currentGameState.getPacmanPosition()
+    currentFood = currentGameState.getFood()  # food available from current state
+    currentCapsules = currentGameState.getCapsules()  # power pellets/capsules available from current state
+    currentGhostStates = currentGameState.getGhostStates()
+    currentScaredTimes = [ghostState.scaredTimer for ghostState in currentGhostStates]
+    score = currentGameState.getScore()
+    score += sum([1.0 / manhattanDistance(currentPos, position) for position in currentCapsules])
+    score += sum([1.0 / manhattanDistance(currentPos, position) for position in currentFood.asList()])
+    score += (currentFood.count() - currentFood.count())
+    totaltime = sum([time for time in currentScaredTimes])
+    score += totaltime
+    for ghostState in currentGhostStates:
+        if manhattanDistance(currentPos, ghostState.getPosition()) <= 1:
+            if totaltime > 0:
+                score += 1000
+            else:
+                score -= 1000
+    return score
 
 
 # Abbreviation
