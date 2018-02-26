@@ -280,13 +280,13 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             return self.evaluationFunction(gameState), None
         for action in legalMoves:
             state = gameState.generateSuccessor(index, action)
-            scores.append(self.min_value(state, 1, depth))
+            scores.append(self.expect_value(state, 1, depth))
         bestScore = max(scores)
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
         chosenIndex = random.choice(bestIndices)  # Pick randomly among the best
         return bestScore, legalMoves[chosenIndex]
 
-    def min_value(self, gameState, index, depth):
+    def expect_value(self, gameState, index, depth):
         scores = []
         minMaxFlag = index >= gameState.getNumAgents() - 1
         legalMoves = gameState.getLegalActions(index)
@@ -298,7 +298,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             if minMaxFlag:
                 scores.append(self.max_value(state, self.index, depth + 1)[0])
             else:
-                scores.append(weight * self.min_value(state, index + 1, depth))
+                scores.append(weight * self.expect_value(state, index + 1, depth))
         bestScore = sum(scores)
         return bestScore
 
@@ -365,11 +365,14 @@ class ContestAgent(MultiAgentSearchAgent):
         return self.minimax_decision(gameState)
 
     def minimax_decision(self, gameState):
-        max_score, action = self.max_value(gameState, self.index, 0)
+        max_score, action = self.max_value(gameState, self.index, 0, float('-inf'), float('inf'))
+        # print max_score
         return action
 
-    def max_value(self, gameState, index, depth):
-        scores = []
+
+    def max_value(self, gameState, index, depth, alpha, beta):
+        v = float('-inf')
+        move = None
         legalMoves = gameState.getLegalActions(index)
         # if 'Stop' in legalMoves:
         #     legalMoves.remove('Stop')
@@ -377,29 +380,39 @@ class ContestAgent(MultiAgentSearchAgent):
             return contestEvaluationFunction(gameState), None
         for action in legalMoves:
             state = gameState.generateSuccessor(index, action)
-            scores.append(self.min_value(state, 1, depth))
-        bestScore = max(scores)
-        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
-        chosenIndex = random.choice(bestIndices)  # Pick randomly among the best
-        return bestScore, legalMoves[chosenIndex]
+            value = self.min_value(state, 1, depth, alpha, beta)[0]
+            if v < value:
+                v = value
+                move = action
+            if v > beta:
+                return v, move
+            alpha = max(alpha, v)
+        return v, move
 
-    def min_value(self, gameState, index, depth):
-        scores = []
+    def min_value(self, gameState, index, depth, alpha, beta):
+        v = float('inf')
+        move = None
         minMaxFlag = index >= gameState.getNumAgents() - 1
         legalMoves = gameState.getLegalActions(index)
         if gameState.isLose() or gameState.isWin():
-            return contestEvaluationFunction(gameState)
-        weight = 1.0 / len(legalMoves)
+            return contestEvaluationFunction(gameState), None
         for action in legalMoves:
             state = gameState.generateSuccessor(index, action)
             if minMaxFlag:
-                scores.append(self.max_value(state, self.index, depth + 1)[0])
+                value = self.max_value(state, self.index, depth + 1, alpha, beta)[0]
             else:
-                scores.append(weight * self.min_value(state, index + 1, depth))
-        return sum(scores)
+                value = self.min_value(state, index + 1, depth, alpha, beta)[0]
+            if v > value:
+                v = value
+                move = action
+            if v < alpha:
+                return v, move
+            beta = min(beta, v)
+        return v, move
+
 def contestEvaluationFunction(currentGameState):
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # util.raiseNotDefined()
     currentPos = currentGameState.getPacmanPosition()
     currentFood = currentGameState.getFood()  # food available from current state
     currentCapsules = currentGameState.getCapsules()  # power pellets/capsules available from current state
@@ -411,9 +424,11 @@ def contestEvaluationFunction(currentGameState):
     totaltime = sum([time for time in currentScaredTimes])
     score += totaltime
     if totaltime > 0 and currentPos == currentGhostStates[0].start.pos:
-        score -= 100
+        score -= 10
     for ghostState in currentGhostStates:
-        if manhattanDistance(currentPos, ghostState.getPosition()) <= 2:
-            if not totaltime > 0:
+        distance = manhattanDistance(currentPos, ghostState.getPosition())
+        if not totaltime > 0:
+            if distance < 3:
                 score -= 100
+
     return score
