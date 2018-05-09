@@ -30,9 +30,6 @@ class ActorCritic(object):
             dense1 = tf.layers.dense(inputs=dense, units=self.ob_dim * 10, activation=tf.nn.tanh)
             dense2 = tf.layers.dense(inputs=dense1, units=int(np.mean([self.ob_dim,self.ac_dim])) * 10, activation=tf.nn.tanh)
             dense3 = tf.layers.dense(inputs=dense2, units=self.ac_dim * 10, activation=tf.nn.tanh)
-            # dense1 = tf.layers.dense(inputs=dense, units=64, activation=tf.nn.tanh)
-            # dense2 = tf.layers.dense(inputs=dense1, units=64, activation=tf.nn.tanh)
-            # dense3 = tf.layers.dense(inputs=dense2, units=64, activation=tf.nn.tanh)
             output = tf.layers.dense(inputs=dense3, units=output_size, activation=None)
         return output
 
@@ -46,10 +43,8 @@ class ActorCritic(object):
                                                                              logits=self.actor_logits)
         else:
             logstd = tf.Variable(tf.zeros([1, self.ac_dim]), name="logstd", dtype=tf.float32)
-            std = tf.exp(logstd)
-            uniform_distribution = tf.random_normal(tf.shape(self.actor_logits))
-            self.sampled_actions_prob = self.actor_logits + std * uniform_distribution
-            actor_logprob = -0.5 * tf.reduce_sum(tf.square((self.actor_logits - self.action_target_placeholder) / std),
+            self.sampled_actions_prob = self.actor_logits + tf.exp(logstd)* tf.random_normal(tf.shape(self.actor_logits))
+            actor_logprob = -0.5 * tf.reduce_sum(tf.square((self.actor_logits - self.action_target_placeholder) / tf.exp(logstd)),
                                                  axis=1)
         loss = - tf.reduce_mean(actor_logprob * self.advantages_placeholder)
         self.actor_update_optimizer = tf.train.AdamOptimizer(learning_rate=actor_learning_rate).minimize(loss)
@@ -61,16 +56,12 @@ class ActorCritic(object):
         loss = tf.nn.l2_loss(self.critic_prediction - self.critic_target_placeholder)
         self.critic_update_optimizer = tf.train.AdamOptimizer(critic_learning_rate).minimize(loss)
 
-    def train(self,env_name, env, restore, animate, n_iter, max_path_length, min_timesteps_per_batch, logdir):
+    def train(self,env_name, env, restore, animate, n_iter, max_path_length, episode_per_batch, logdir):
         # start = time.time()
 
         logz.configure_output_dir(logdir)
 
         # Log experimental parameters
-        args = inspect.getargspec(self.train)[0]
-        locals_ = globals()
-        params = {k: locals_[k] if k in locals_ else None for k in args}
-        logz.save_params(params)
         saver = tf.train.Saver()
 
         tf_config = tf.ConfigProto(inter_op_parallelism_threads=1, intra_op_parallelism_threads=1)
@@ -89,7 +80,7 @@ class ActorCritic(object):
             saver.restore(self.sess, model_path)
             print("Model restored from path: %s" % model_path)
         for iter in range(n_iter):
-            critic, advantages, paths = self.pre_play(env, animate, iter, max_path_length, min_timesteps_per_batch)
+            critic, advantages, paths = self.pre_play(env, animate, iter, max_path_length, episode_per_batch)
             # print('observation', self.observation_update)
             self.sess.run(self.critic_update_optimizer, feed_dict={self.observation_placeholder: self.observation_update,
                                                                    self.critic_target_placeholder: self.normalize(critic)})
@@ -121,11 +112,10 @@ class ActorCritic(object):
         for path in paths:
             q = 0
             q_path = []
-            for reward in reversed(path['reward']):
+            for reward in path['reward'][::-1]:
                 q = reward + self.gamma * q
                 q_path.append(q)
-            q_path.reverse()
-            q_paths.extend(q_path)
+            q_paths.extend(q_path[::-1])
 
         critic = self.sess.run(self.critic_prediction,
                                feed_dict={self.observation_placeholder: self.observation_update})
@@ -139,33 +129,29 @@ class ActorCritic(object):
             v_next = 0
             index += len(path['reward'])
 
-            for reward, v in zip(reversed(path['reward']), critic[index-1:None:-1]):
+            for reward, v in zip(path['reward'][::-1], critic[index-1:None:-1]):
                 q = reward + self.gamma * v_next - v
                 adv = q + self.gae_lambda * self.gamma * adv
                 adv_path.append(adv)
                 v_next = v
-            adv_path.reverse()
-            adv_paths.extend(adv_path)
+            adv_paths.extend(adv_path[::-1])
         critic = critic + adv_paths
         return critic, adv_paths
 
-    def pre_play(self, env, animate, iter, max_path_length, min_timesteps_per_batch):
-        total_timesteps = 0
-        timesteps = 0
+    def pre_play(self, env, animate, iter, max_path_length, episode_per_batch):
+        episode = 0
         paths = []
         while True:
             # simulate 1 episode and get a path within limited steps
             ob = env.reset()
             obs, actions, rewards = [], [], []
-            # animate = (len(paths) == 0 and (iter % 10 == 0) and animate)
             steps = 0
             while True:
                 if animate:
                     env.render()
-                    time.sleep(0.05)
+                    # time.sleep(0.05)
                 obs.append(ob)
-                act = self.sess.run(self.sampled_actions_prob, feed_dict={self.observation_placeholder: [ob]})
-                act = act[0]
+                act = self.sess.run(self.sampled_actions_prob, feed_dict={self.observation_placeholder: [ob]})[0]
                 actions.append(act)
 
                 ob, reward, done, _ = env.step(act)
@@ -177,10 +163,9 @@ class ActorCritic(object):
                     'action': np.array(actions),
                     'reward': np.array(rewards)}
             paths.append(path)
-            timesteps += 1
-            if timesteps > min_timesteps_per_batch:
+            episode += 1
+            if episode > episode_per_batch:
                 break
-        total_timesteps += timesteps
 
         self.observation_update = np.concatenate([path['observation'] for path in paths])
         self.action_update = np.concatenate([path['action'] for path in paths])
@@ -188,5 +173,5 @@ class ActorCritic(object):
         return critic, advantages, paths
 
     def normalize(self, data, mean=0.0, std=1.0):
-        n_data = (data - np.mean(data)) / (np.std(data) + 1e-8)
-        return n_data * (std + 1e-8) + mean
+        n_data = (data - np.mean(data)) / (np.std(data) + 1e-7)
+        return n_data * (std + 1e-7) + mean

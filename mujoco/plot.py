@@ -64,8 +64,9 @@ def get_datasets(fpath, condition=None):
         if 'log.txt' in files:
             #param_path = open(os.path.join(root,'params.json'))
             #params = json.load(param_path)
-            exp_name = 'env_name'
-            
+            # exp_name = 'InvertedPendulum-v2'
+            exp_name = 'Walker2d-v2'
+
             log_path = os.path.join(root,'log.txt')
             experiment_data = pd.read_table(log_path)
 
@@ -91,6 +92,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('logdir', nargs='*')
     parser.add_argument('--legend', nargs='*')
+    # parser.add_argument('--value', default='MaxReturn', nargs='*')
     parser.add_argument('--value', default='AverageReturn', nargs='*')
     args = parser.parse_args()
 
