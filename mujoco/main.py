@@ -9,9 +9,15 @@ import os
 def main():
     random_seed = 1
     tf.set_random_seed(random_seed)
-    env_name = 'Hopper-v2'
+    # env_name = 'Hopper-v2'
+    # env_name = 'Humanoid-v2'
+    env_name = 'Walker2d-v2'
+    # env_name = 'InvertedPendulum-v2'
     np.random.seed(random_seed)
     env = gym.make(env_name)
+
+    # env = gym.wrappers.FlattenDictWrapper(env, dict_keys=['observation', 'desired_goal'])
+
     discrete = isinstance(env.action_space, gym.spaces.Discrete)
 
     max_path_length = None
@@ -26,16 +32,19 @@ def main():
     gamma = 0.99
     gae_lambda = 0.98
     actor_learning_rate = 0.005
-    critic_learning_rate = 0.001
+    critic_learning_rate = 0.005
 
     animate = True
     restore = True
-    n_iter = 10
-    min_timesteps_per_batch = 100
+    n_iter = 2000
+    episode_per_batch = 20
 
     if not (os.path.exists('data')):
         os.makedirs('data')
-    logdir = 'Hopper-v2' + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+    # logdir = 'Hopper-v2' + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+    logdir = 'Walker2d-v2' + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+    # logdir = 'Humanoid-v2' + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
+    # logdir = 'InvertedPendulum-v2' + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
     logdir = os.path.join('data', logdir)
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
@@ -45,7 +54,7 @@ def main():
     tf.reset_default_graph()
     my_model = model(ob_dim, ac_dim, discrete, gamma, gae_lambda, actor_learning_rate, critic_learning_rate
                      )
-    my_model.train(env_name, env, restore, animate, n_iter, max_path_length, min_timesteps_per_batch,
+    my_model.train(env_name, env, restore, animate, n_iter, max_path_length, episode_per_batch,
                    os.path.join(logdir, '%d' % random_seed))
 
 
